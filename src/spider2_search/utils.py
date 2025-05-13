@@ -55,7 +55,7 @@ def retrieve(
             results = results.rerank(reranker=reranker)
 
         return [
-            {"instance_id": result["instance_id"], "chunk": result["chunk"]}
+            {"id": result["id"], "chunk": result["chunk"]}
             for result in results.to_list()
         ]
     except ValueError as e:
@@ -65,6 +65,6 @@ def retrieve(
             results = results.rerank(reranker=reranker)
 
         return [
-            {"instance_id": result["instance_id"], "chunk": result["chunk"]}
+            {"id": result["id"], "chunk": result["chunk"]}
             for result in results.to_list()
         ]

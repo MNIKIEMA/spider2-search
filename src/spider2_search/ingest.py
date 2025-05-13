@@ -28,7 +28,7 @@ def preprocess_dataset(
     # Filter and format the dataset in one step
     formatted_dataset = [
         {
-            "instance_id": item["instance_id"],
+            "id": item["instance_id"],
             "external_knowledge": item["external_knowledge"],
         }
         for item in data.to_list()
@@ -38,10 +38,10 @@ def preprocess_dataset(
     all_docs: t.List[t.Dict[str, str]] = []
     for item in formatted_dataset:
         kg = item["external_knowledge"]
-        instance_id = item["instance_id"]
+        instance_id = item["id"]
         splited_kg = chunk_with_md_header(kg, splitter)
         for chunk in splited_kg:
-            all_docs.append({"instance_id": instance_id, "chunk": chunk.page_content})
+            all_docs.append({"id": instance_id, "chunk": chunk.page_content})
     return datasets.Dataset.from_list(all_docs)
 
 
@@ -55,7 +55,7 @@ def get_or_create_lancedb_table(
     func = get_func(name=embedding_model, model=model_name)
 
     class Chunk(LanceModel):
-        instance_id: str
+        id: str
         chunk: str = func.SourceField()
         vector: Vector = func.VectorField()  # type: ignore
 

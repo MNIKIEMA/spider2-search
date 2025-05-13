@@ -18,6 +18,7 @@ from spider2_search.ingest import get_or_create_lancedb_table, preprocess_datase
 
 torch.cuda.empty_cache()
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run retrieval system with LanceDB")
     parser.add_argument(
@@ -74,7 +75,7 @@ def run_evaluation(args, table, model):
     precision_scores = []
 
     for item in tqdm(dataset, desc="Evaluating"):
-        gt_instance_id = item["instance_id"]
+        gt_instance_id = item["id"]
         question = item["question"]
 
         results = retrieve(
@@ -85,7 +86,7 @@ def run_evaluation(args, table, model):
             reranker=reranker,
         )
 
-        prediction_ids = [result["instance_id"] for result in results]
+        prediction_ids = [result["id"] for result in results]
 
         # Calculate metrics
         mrr = calculate_mrr(prediction_ids, [gt_instance_id])
@@ -130,7 +131,7 @@ def run_interactive(args, table):
     print(f"\nFound {len(results)} results:")
     for i, result in enumerate(results):
         print(f"\n--- Result {i + 1} ---")
-        print(f"Instance ID: {result['instance_id']}")
+        print(f"Instance ID: {result['id']}")
         print(f"Content: {result['chunk'][:200]}...")  # Show first 200 chars
 
     return results
