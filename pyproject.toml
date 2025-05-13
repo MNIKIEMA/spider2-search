@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["spider2_search*"]
+
+
+[project]
+name = "spider2-search"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=3.5.1",
+    "lancedb>=0.22.0",
+    "langchain-text-splitters>=0.3.8",
+    "loguru>=0.7.3",
+    "matplotlib>=3.10.1",
+    "pylance>=0.26.1",
+    "sentence-transformers>=4.1.0",
+    "tantivy>=0.22.2",
+    "tokenizers>=0.21.1",
+    "transformers>=4.51.3",
+]
+
+[tool.ruff]
+line-length = 100
