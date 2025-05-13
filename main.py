@@ -60,7 +60,7 @@ def run_evaluation(args, table, model):
 
     # Load test queries and ground truth
     dataset = datasets.load_dataset("json", data_files=args.data_file, split="train")
-    dataset = dataset.filter(lambda x: bool(x["external_knowledge"]) or bool(x["question"]))
+    dataset = dataset.filter(lambda x: bool(x["external_knowledge"]) and bool(x["question"]))
     dataset = dataset.map(
         get_embeddings, batched=True, fn_kwargs={"model": model, "column": "question"}
     )
@@ -75,7 +75,7 @@ def run_evaluation(args, table, model):
     precision_scores = []
 
     for item in tqdm(dataset, desc="Evaluating"):
-        gt_instance_id = item["id"]
+        gt_instance_id = item["instance_id"]
         question = item["question"]
 
         results = retrieve(
@@ -161,11 +161,15 @@ def main():
     model_name = args.embedding_model.split("/")[-1]
     model = SentenceTransformer(args.model_name)
     table_name = f"chunks_{model_name}"
-    dataset = dataset.map(get_embeddings, batched=True, batch_size=5, fn_kwargs={"model": model})
-
+    # dataset = dataset.map(lambda x: {"length": len(x["chunk"].split())})
+    # dataset = dataset.sort("length")
+    # dataset = dataset.remove_columns("length")
+    # dataset = dataset.map(get_embeddings, load_from_cache_file=False, fn_kwargs={"model": model})
+    # dataset.with_format(type="arrow", columns=["vector"], output_all_columns=True)
     # Get or create table
     print(f"Getting or creating table {table_name}...")
-    dataset.with_format(type="numpy", columns=["vector"], output_all_columns=True)
+    
+    print(f"Embedding Model: {args.embedding_model}, Model Name: {args.model_name} Top K: {args.top_k}")
     table = get_or_create_lancedb_table(
         db=db,
         table_name=table_name,

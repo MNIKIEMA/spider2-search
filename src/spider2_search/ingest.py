@@ -58,14 +58,16 @@ def get_or_create_lancedb_table(
         id: str
         chunk: str = func.SourceField()
         vector: Vector = func.VectorField()  # type: ignore
+        vector: Vector(func.ndims()) = func.VectorField()  # type: ignore
 
-    if table_name in db.table_names():
+    if table_name in db.table_names() and db.open_table(table_name).count_rows() > 0:
         print(f"Table {table_name} already exists")
         table = db.open_table(table_name)
         table.create_fts_index("chunk", replace=True)
         return table
 
-    table = db.create_table(table_name, mode="overwrite", data=all_docs)
+    table = db.create_table(table_name, schema=Chunk, mode="overwrite")
+    table.add(all_docs)
     print(f"Table {table_name} created with {len(all_docs)} chunks")
     table.create_fts_index("chunk", replace=True)
     print(f"{table.count_rows()} chunks ingested into the database")

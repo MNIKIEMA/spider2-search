@@ -15,8 +15,6 @@ def calculate_mrr(predictions: list[str], gt: list[str]):
 
 def calculate_recall(predictions: list[str], gt: list[str]):
     # Calculate the proportion of relevant items that were retrieved
-    print(f"GT: {gt}")
-    print(f"Predictions: {predictions}")
     return len([label for label in gt if label in predictions]) / len(gt)
 
 
