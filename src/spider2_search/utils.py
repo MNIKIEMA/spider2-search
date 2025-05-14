@@ -52,17 +52,11 @@ def retrieve(
         if reranker:
             results = results.rerank(reranker=reranker)
 
-        return [
-            {"id": result["id"], "chunk": result["chunk"]}
-            for result in results.to_list()
-        ]
+        return [{"id": result["id"], "chunk": result["chunk"]} for result in results.to_list()]
     except ValueError as e:
         print(f"Search error with mode {mode}, falling back to vector search: {str(e)}")
         results = table.search(question, query_type="vector").limit(max_k)
         if reranker:
             results = results.rerank(reranker=reranker)
 
-        return [
-            {"id": result["id"], "chunk": result["chunk"]}
-            for result in results.to_list()
-        ]
+        return [{"id": result["id"], "chunk": result["chunk"]} for result in results.to_list()]
