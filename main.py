@@ -1,4 +1,5 @@
 import argparse
+from typing import Any
 import json
 import datasets
 import lancedb
@@ -18,6 +19,7 @@ from spider2_search.utils import (
     calculate_precision,
 )
 from spider2_search.ingest import get_or_create_lancedb_table, preprocess_dataset
+from spider2_search.plotting import plot_metrics
 # from spider2_search.ingest import get_embeddings
 
 torch.cuda.empty_cache()
@@ -79,49 +81,57 @@ def run_evaluation(args, table: Table, model):
     # dataset.with_format(type="numpy", columns=["vector"], output_all_columns=True)
 
     top_k = [k for k in args.top_k if k <= args.max_k]
-    all_results = []
+    all_results: list[dict[str, Any]] = []
 
-    reranker = None
-    if args.use_reranker:
-        reranker = CrossEncoderReranker(column="chunk")
+    cross_encoder = CrossEncoderReranker(
+        model_name="cross-encoder/ms-marco-MiniLM-L6-v2", column="chunk"
+    )
+    rerankers = [None, cross_encoder]
 
-    for search_mode in args.search_mode:
-        for item in tqdm(dataset, desc="Evaluating"):
-            gt_instance_id = item["instance_id"]
-            question = item["question"]
-            results = retrieve(
-                question=question,
-                table=table,
-                max_k=args.max_k,
-                mode=search_mode,
-                reranker=reranker,
-            )
+    for reranker in rerankers:
+        reranker_name = "cross-encoder" if reranker else None
+        embedding_model_name = (
+            "static-retrieval-mrl-en-v1-" + reranker_name
+            if reranker_name
+            else "static-retrieval-mrl-en-v1"
+        )
+        for search_mode in args.search_mode:
+            for item in tqdm(dataset, desc="Evaluating"):
+                gt_instance_id = item["instance_id"]
+                question = item["question"]
+                results = retrieve(
+                    question=question,
+                    table=table,
+                    max_k=args.max_k,
+                    mode=search_mode,
+                    reranker=reranker,
+                )
 
-            for k in top_k:
-                prediction_ids = [result["id"] for result in results[:k]]
-                mrr = calculate_mrr(prediction_ids, [gt_instance_id])
-                recall = calculate_recall(prediction_ids, [gt_instance_id])
-                precision = calculate_precision(prediction_ids, [gt_instance_id])
-                res = [
-                    ("mrr", mrr),
-                    ("recall", recall),
-                    ("precision", precision),
-                ]
+                for k in top_k:
+                    prediction_ids = [result["id"] for result in results[:k]]
+                    mrr = calculate_mrr(prediction_ids, [gt_instance_id])
+                    recall = calculate_recall(prediction_ids, [gt_instance_id])
+                    precision = calculate_precision(prediction_ids, [gt_instance_id])
+                    res = [
+                        ("mrr", mrr),
+                        ("recall", recall),
+                        ("precision", precision),
+                    ]
 
-                for metric, value in res:
-                    all_results.append(
-                        {
-                            "id": gt_instance_id,
-                            "question": question,
-                            "prediction_ids": prediction_ids,
-                            "metric": metric,
-                            "k": k,
-                            "reranker": args.use_reranker,
-                            "embedding_model": args.embedding_model,
-                            "query_type": search_mode,
-                            "score": value,
-                        }
-                    )
+                    for metric, value in res:
+                        all_results.append(
+                            {
+                                "id": gt_instance_id,
+                                "question": question,
+                                "prediction_ids": prediction_ids,
+                                "metric": metric,
+                                "k": k,
+                                "reranker": reranker_name,
+                                "embedding_model": embedding_model_name,
+                                "query_type": search_mode,
+                                "score": value,
+                            }
+                        )
     df = pd.DataFrame(all_results)
     agg_df = (
         df.groupby(["embedding_model", "query_type", "k", "metric"])
@@ -130,6 +140,7 @@ def run_evaluation(args, table: Table, model):
     )
     print("\n📊 Aggregated Results:")
     print(tabulate(agg_df, headers="keys", tablefmt="grid", showindex=True))  # type: ignore
+    plot_metrics(agg_df)
     return all_results
 
 
